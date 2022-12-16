@@ -1,73 +1,77 @@
-#include <Adafruit_TestBed.h>
-extern Adafruit_TestBed TB;
+/******************************************************************************
+  Example1_BasicReadings.ino
+  Example for the TMP117 I2C Temperature Sensor
+  Madison Chodikov @ SparkFun Electronics
+  May 29 2019
+  ~
 
-#define DEFAULT_I2C_PORT &Wire
+  This sketch configures the TMP117 temperature sensor and prints the
+  temperature in degrees celsius and fahrenheit with a 500ms delay for
+  easier readings. 
 
-// Some boards have TWO I2C ports, how nifty. We should scan both
-#if defined(ARDUINO_ARCH_RP2040) \
-    || defined(ARDUINO_ADAFRUIT_QTPY_ESP32S2) \
-    || defined(ARDUINO_ADAFRUIT_QTPY_ESP32S3_NOPSRAM) \
-    || defined(ARDUINO_ADAFRUIT_QTPY_ESP32S3) \
-    || defined(ARDUINO_ADAFRUIT_QTPY_ESP32_PICO) \
-    || defined(ARDUINO_SAM_DUE)
-  #define SECONDARY_I2C_PORT &Wire1
-#endif
+  Resources:
+  Wire.h (included with Arduino IDE)
+  SparkFunTMP117.h (included in the src folder) http://librarymanager/All#SparkFun_TMP117
+
+  Development environment specifics:
+  Arduino 1.8.9+
+  Hardware Version 1.0.0
+
+  This code is beerware; if you see me (or any other SparkFun employee) at
+  the local, and you've found our code helpful, please buy us a round!
+
+  Distributed as-is; no warranty is given.
+******************************************************************************/
+
+/*
+  NOTE: For the most accurate readings:
+  - Avoid heavy bypass traffic on the I2C bus
+  - Use the highest available communication speeds
+  - Use the minimal supply voltage acceptable for the system
+  - Place device horizontally and out of any airflow when storing
+  For more information on reaching the most accurate readings from the sensor,
+  reference the "Precise Temperature Measurements with TMP116" datasheet that is
+  linked on Page 35 of the TMP117's datasheet
+*/
+
+#include <Wire.h>            // Used to establish serial communication on the I2C bus
+#include <SparkFun_TMP117.h> // Used to send and recieve specific information from our sensor
+
+// The default address of the device is 0x48 = (GND)
+TMP117 sensor; // Initalize sensor
+
 
 void setup() {
   // put your setup code here, to run once:
-    Serial.begin(115200);
+  Wire.begin();
+  Serial.begin(115200);    // Start serial communication at 115200 baud
+  Wire.setClock(400000);   // Set clock speed to be the fastest for better communication (fast mode)
 
-  // Wait for Serial port to open
-  while (!Serial) {
-    delay(10);
+  Serial.println("TMP117 Example 1: Basic Readings");
+  if (sensor.begin() == true) // Function to check if the sensor will correctly self-identify with the proper Device ID/Address
+  {
+    Serial.println("Begin");
   }
-  delay(500);
-  Serial.println("Adafruit I2C Scanner");
-
-#if defined(ARDUINO_ADAFRUIT_QTPY_ESP32S2) || \
-    defined(ARDUINO_ADAFRUIT_QTPY_ESP32S3_NOPSRAM) || \
-    defined(ARDUINO_ADAFRUIT_QTPY_ESP32S3) || \
-    defined(ARDUINO_ADAFRUIT_QTPY_ESP32_PICO)
-  // ESP32 is kinda odd in that secondary ports must be manually
-  // assigned their pins with setPins()!
-  Wire1.setPins(SDA1, SCL1);
-#endif
-
-#if defined(ARDUINO_ADAFRUIT_FEATHER_ESP32S2)
-  // turn on the I2C power by setting pin to opposite of 'rest state'
-  pinMode(PIN_I2C_POWER, INPUT);
-  delay(1);
-  bool polarity = digitalRead(PIN_I2C_POWER);
-  pinMode(PIN_I2C_POWER, OUTPUT);
-  digitalWrite(PIN_I2C_POWER, !polarity);
-#endif
-
-#if defined(ARDUINO_ADAFRUIT_FEATHER_ESP32S2_TFT)
-  pinMode(TFT_I2C_POWER, OUTPUT);
-  digitalWrite(TFT_I2C_POWER, HIGH);
-#endif
-
-#if defined(ADAFRUIT_FEATHER_ESP32_V2)
-  // Turn on the I2C power by pulling pin HIGH.
-  pinMode(NEOPIXEL_I2C_POWER, OUTPUT);
-  digitalWrite(NEOPIXEL_I2C_POWER, HIGH);
-#endif
+  else
+  {
+    Serial.println("Device failed to setup- Freezing code.");
+    while (1); // Runs forever
+  }
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  Serial.println("");
-  Serial.println("");
-
-  Serial.print("Default port (Wire) ");
-  TB.theWire = DEFAULT_I2C_PORT;
-  TB.printI2CBusScan();
-
-#if defined(SECONDARY_I2C_PORT)
-  Serial.print("Secondary port (Wire1) ");
-  TB.theWire = SECONDARY_I2C_PORT;
-  TB.printI2CBusScan();
-#endif
-
-  delay(3000); // wait 3 seconds
+  // Data Ready is a flag for the conversion modes - in continous conversion the dataReady flag should always be high
+  if (sensor.dataReady() == true) // Function to make sure that there is data ready to be printed, only prints temperature values when data is ready
+  {
+    float tempC = sensor.readTempC();
+    float tempF = sensor.readTempF();
+    // Print temperature in °C and °F
+    Serial.println(); // Create a white space for easier viewing
+    Serial.print("Temperature in Celsius: ");
+    Serial.println(tempC);
+    Serial.print("Temperature in Fahrenheit: ");
+    Serial.println(tempF);
+    delay(500); // Delay added for easier readings
+  }
 }
